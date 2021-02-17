@@ -52,7 +52,7 @@ public final class AdminService {
 
     public String getPasswordFromMessage(String text) {
         String[] arrayString = text.split(" ");
-        return arrayString[1].strip();
+        return arrayString[1].trim();
     }
 
     public boolean checkAuthentication(User user) {
@@ -60,7 +60,7 @@ public final class AdminService {
     }
 
     public boolean checkAuthentication(String text) {
-        return this.password.strip().equals(text.strip());
+        return this.password.trim().equals(text.trim());
     }
 
     private List<String> getPhoneAndName(String message) {
@@ -92,7 +92,7 @@ public final class AdminService {
         LOGGER.info("getPhoneAndName: " + phone + " " + name);
 
         // Supposed to be 4 quote symbols
-        if (count != 4 || phone.toString().strip().isEmpty() || name.toString().strip().isEmpty()) {
+        if (count != 4 || phone.toString().trim().isEmpty() || name.toString().trim().isEmpty()) {
             return null;
         }
 
@@ -177,8 +177,8 @@ public final class AdminService {
 
         StringBuilder textMessage = new StringBuilder();
         for(Phone temp: findPhones) {
-            textMessage.append("\"").append(temp.getPhone().strip()).append("\"")
-                    .append(" \"").append(temp.getName().strip()).append("\"").append("\n");
+            textMessage.append("\"").append(temp.getPhone().trim()).append("\"")
+                    .append(" \"").append(temp.getName().trim()).append("\"").append("\n");
         }
         textMessage.delete(textMessage.length() - 1, textMessage.length());
 
@@ -197,7 +197,7 @@ public final class AdminService {
     }
 
     private boolean isInvalidDeleteMessage(String message) {
-        return message == null || message.strip().equals("");
+        return message == null || message.trim().equals("");
     }
 
     private InlineKeyboardMarkup getDeleteKeyboard(String number) {
@@ -305,7 +305,7 @@ public final class AdminService {
         List<String[]> list = new ArrayList<>();
         list.add(header);
         for(Phone temp: phones) {
-            list.add(new String[] {temp.getId().toString().strip(), temp.getName().strip(), temp.getPhone().strip(),
+            list.add(new String[] {temp.getId().toString().trim(), temp.getName().trim(), temp.getPhone().trim(),
                     simpleDateFormat.format(temp.getCreationDate())});
         }
         return list;
@@ -316,7 +316,7 @@ public final class AdminService {
         List<String[]> list = new ArrayList<>();
         list.add(header);
         for(NewContact temp: newContacts) {
-            list.add(new String[] {temp.getId().toString().strip(), temp.getPhone().strip(),
+            list.add(new String[] {temp.getId().toString().trim(), temp.getPhone().trim(),
                     simpleDateFormat.format(temp.getInitDate())});
         }
         return list;

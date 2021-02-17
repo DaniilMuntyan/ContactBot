@@ -73,10 +73,10 @@ public final class PhoneService {
         LOGGER.info("getPhoneFromMessage: " + phone);
 
         // Supposed to be 2 quote symbols
-        if (count != 2 || phone.toString().strip().isEmpty()) {
+        if (count != 2 || phone.toString().trim().isEmpty()) {
             return null;
         }
-        return phone.toString().strip();
+        return phone.toString().trim();
     }
 
     public List<Phone> findContact(String number) {

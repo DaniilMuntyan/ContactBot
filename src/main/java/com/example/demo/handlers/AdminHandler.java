@@ -49,10 +49,10 @@ public final class AdminHandler {
     }
 
     public PartialBotApiMethod<?> handleAdminCommand(String text, User user, SendMessage response) {
-        String[] arrayString = text.strip().split(" ");
+        String[] arrayString = text.trim().split(" ");
         String command = arrayString[0];
         String[] stringPart = Arrays.copyOfRange(arrayString, 1, arrayString.length);
-        String stringWithoutCommand = String.join(" ", stringPart).strip();
+        String stringWithoutCommand = String.join(" ", stringPart).trim();
         PartialBotApiMethod<?> answer = null;
 
         switch(command) {

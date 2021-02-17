@@ -64,7 +64,7 @@ public final class CallbackHandler {
                 return newMessage;
             }
 
-            String number = arrayCallbackData[1].strip();
+            String number = arrayCallbackData[1].trim();
             return adminService.deleteContactConfirmed(number, newMessage);
         }
 
