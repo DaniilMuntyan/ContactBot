@@ -1,11 +1,20 @@
 package com.example.demo.constants;
 
-public interface Commands {
-    String START = "/start";
-    String HELP = "/help";
-    String ADD = "/add";
-    String EDIT = "/edit";
-    String DELETE = "/delete";
-    String LIST = "/list";
-    String ADMIN = "/admin";
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class Commands {
+    public final static String START = "/start";
+    public final static String HELP = "/help";
+    public final static String ADD = "/add";
+    public final static String EDIT = "/edit";
+    public final static String DELETE = "/delete";
+    public final static String NEW = "/unknown";
+    public final static String BACKUP = "/backup";
+    public final static String ADMIN = "/admin";
+
+    public static List<String> getAllCommands() {
+        return new ArrayList<>(Arrays.asList(START, HELP, ADD, EDIT, DELETE, NEW, BACKUP, ADMIN));
+    }
 }

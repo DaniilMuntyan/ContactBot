@@ -5,17 +5,14 @@ import com.example.demo.model.User;
 import com.example.demo.service.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import static java.time.LocalDate.now;
 
 @Component
 public final class MessageHandler {
@@ -32,8 +29,7 @@ public final class MessageHandler {
         this.userService = userService;
         this.textHandler = textHandler;
         this.commandHandler = commandHandler;
-        commands = Arrays.asList(Commands.START, Commands.ADMIN, Commands.HELP, Commands.ADD, Commands.EDIT,
-                Commands.DELETE, Commands.LIST);
+        commands = Commands.getAllCommands();
     }
 
     public PartialBotApiMethod<?> handleMessage(Message message) {
@@ -41,6 +37,7 @@ public final class MessageHandler {
         final String text = message.getText();
         final Long chatId = message.getChatId();
         LOGGER.info(String.format("handleMessage: %s %s", chatId.toString(), text));
+        LOGGER.info(new Date(message.getDate() * 1000L));
 
         Optional<User> user = userService.findByChatId(chatId);
         SendMessage response = new SendMessage();

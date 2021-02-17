@@ -1,13 +1,10 @@
 package com.example.demo.service;
 
-import com.example.demo.botapi.ContactTelegramBot;
 import lombok.Getter;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 @Service
 @PropertySource("classpath:messages.properties")
@@ -54,6 +51,10 @@ public class MessageService {
     @Getter
     private String editFail;
 
+    @Value("${message.admin.edit.noSuchNumber}")
+    @Getter
+    private String editNoNumber;
+
     @Value("${message.admin.delete.success}")
     @Getter
     private String deleteSuccess;
@@ -70,9 +71,29 @@ public class MessageService {
     @Getter
     private String listText;
 
+    @Value("${message.admin.alreadyInAdminMode}")
+    @Getter
+    private String alreadyAdmin;
+
     @Value("${message.admin.list.fail}")
     @Getter
     private String listFail;
+
+    @Value("${message.admin.backup.noRecords}")
+    @Getter
+    private String backupNoRecords;
+
+    @Value("${message.user.phone.text}")
+    @Getter
+    private String userPhoneText;
+
+    @Value("${message.admin.delete.acknowledge}")
+    @Getter
+    private String deleteAcknowledge;
+
+    @Value("${message.admin.delete.cancel}")
+    @Getter
+    private String deleteCancel;
 
     public MessageService() {
         LOGGER.info("MessageService is creating...");

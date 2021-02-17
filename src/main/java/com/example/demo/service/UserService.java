@@ -51,7 +51,7 @@ public final class UserService {
     public boolean checkDdos(User user) { // True, if ddos
         Date now = new Date(System.currentTimeMillis());
         long secondsBetween = (now.getTime() - user.getLastAction().getTime());
-        if (secondsBetween < 1200) {
+        if (secondsBetween < 1000) {
             return true;
         }
 

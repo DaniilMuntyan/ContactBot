@@ -8,11 +8,15 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageMedia;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -94,24 +98,60 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
                 chatAction.setChatId(update.getMessage().getChatId().toString());
             }
 
-            PartialBotApiMethod<?> botApiMethod = updateHandler.updateHandler(update);
-            if (botApiMethod instanceof SendMessage) { // If bot going to send text message
-                if (chatAction != null) {
-                    chatAction.setAction(ActionType.TYPING);
-                    execute(chatAction);
-                }
-                execute((SendMessage) botApiMethod);
-            }
-            if(botApiMethod instanceof SendDocument) { // If bot going to send file
-                if (chatAction != null) {
-                    chatAction.setAction(ActionType.UPLOADDOCUMENT);
-                    execute(chatAction);
-                }
-                execute((SendDocument) botApiMethod);
-            }
+            PartialBotApiMethod<?> responseApiMethod = updateHandler.updateHandler(update);
+            executeApiMethod(update, responseApiMethod, chatAction); // Depending on PartialApiMethod object type
+
         } catch (TelegramApiException e) {
             LOGGER.error(e);
             e.printStackTrace();
+        }
+    }
+
+    private void executeApiMethod(Update update, PartialBotApiMethod<?> responseApiMethod, SendChatAction chatAction)
+            throws TelegramApiException {
+        if (responseApiMethod instanceof SendMessage) { // If bot going to send text message
+            if (chatAction != null) {
+                chatAction.setAction(ActionType.TYPING);
+                execute(chatAction);
+            }
+            if (update.hasCallbackQuery()) { // If callback is sent, then answer it
+                answerCallback(update.getCallbackQuery());
+            }
+            execute((SendMessage) responseApiMethod);
+        }
+        if (responseApiMethod instanceof SendDocument) { // If bot going to send file
+            if (chatAction != null) {
+                chatAction.setAction(ActionType.UPLOADDOCUMENT);
+                execute(chatAction);
+            }
+            if (update.hasCallbackQuery()) { // If callback is sent, then answer it
+                answerCallback(update.getCallbackQuery());
+            }
+            execute((SendDocument) responseApiMethod);
+        }
+        if (responseApiMethod instanceof EditMessageText) { // If bot going to edit message (with buttons)
+            LOGGER.info("EDIT MESSAGE TEXT");
+            if (chatAction != null) {
+                chatAction.setAction(ActionType.TYPING);
+                execute(chatAction);
+            }
+            if (update.hasCallbackQuery()) { // If callback is sent, then answer it
+                answerCallback(update.getCallbackQuery());
+            }
+            execute((EditMessageText) responseApiMethod);
+        }
+    }
+
+    // In order to take callback circle away from the button
+    private void answerCallback(CallbackQuery callbackQuery) {
+        AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
+        answerCallbackQuery.setCallbackQueryId(callbackQuery.getId());
+        answerCallbackQuery.setShowAlert(false);
+        try {
+            execute(answerCallbackQuery);
+        } catch (TelegramApiException ex) {
+            LOGGER.error(ex);
+            ex.printStackTrace();
         }
     }
 }

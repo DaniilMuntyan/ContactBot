@@ -4,8 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.telegram.telegrambots.meta.api.objects.Contact;
 
 import javax.persistence.*;
+import java.util.Date;
 
 @Data
 @Builder
@@ -25,4 +28,15 @@ public final class Phone {
 
     @Column(name="name")
     private String name;
+
+    @Column(name="init_date")
+    @CreationTimestamp
+    private Date creationDate;
+
+    public Phone(Contact contact) {
+        this.phone = contact.getPhoneNumber();
+        this.name = "";
+        this.name += contact.getFirstName() != null ? contact.getFirstName() + " " : "";
+        this.name += contact.getLastName() != null ? contact.getLastName() + " " : "";
+    }
 }

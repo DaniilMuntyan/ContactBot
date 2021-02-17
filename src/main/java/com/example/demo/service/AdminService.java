@@ -1,19 +1,27 @@
 package com.example.demo.service;
 
-import com.example.demo.botapi.ContactTelegramBot;
+import com.example.demo.constants.ProgramVariables;
 import com.example.demo.model.NewContact;
 import com.example.demo.model.Phone;
+import com.example.demo.model.User;
+import com.opencsv.CSVWriter;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.io.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -25,21 +33,30 @@ public final class AdminService {
     private final MessageService messageService;
     private final PhoneService phoneService;
     private final NewContactService newContactService;
+    private final ProgramVariables programVariables;
+
+    private final SimpleDateFormat simpleDateFormat;
 
     @Value("${ADMIN_PASSWORD}")
     private String password;
 
     @Autowired
-    public AdminService(MessageService messageService, PhoneService phoneService, NewContactService newContactService) {
+    public AdminService(MessageService messageService, PhoneService phoneService, NewContactService newContactService, ProgramVariables programVariables) {
         LOGGER.info("AdminService is creating...");
         this.newContactService = newContactService;
         this.phoneService = phoneService;
         this.messageService = messageService;
+        this.programVariables = programVariables;
+        this.simpleDateFormat = new SimpleDateFormat(programVariables.getDateFormat());
     }
 
     public String getPasswordFromMessage(String text) {
         String[] arrayString = text.split(" ");
         return arrayString[1].strip();
+    }
+
+    public boolean checkAuthentication(User user) {
+        return user.isAdminMode();
     }
 
     public boolean checkAuthentication(String text) {
@@ -104,8 +121,8 @@ public final class AdminService {
         String phone = phoneAndName.get(0);
         String name = phoneAndName.get(1);
 
-        Optional<Phone> editedPhone = phoneService.editContact(phone, name);
-        if (editedPhone.isPresent()) {
+        boolean successEdit = phoneService.editContact(phone, name);
+        if (successEdit) {
             response.setText(messageService.getEditSuccess());
         } else {
             response.setText(messageService.getEditFail());
@@ -113,44 +130,117 @@ public final class AdminService {
         return response;
     }
 
-    public SendMessage deleteContact(String message, SendMessage response) {
-        if(message == null || message.strip().equals("")) {
-            response.setText(messageService.getDeleteFail());
-            return response;
+    private SendMessage deleteFailed(SendMessage response) {
+        response.setText(messageService.getDeleteFail());
+        return response;
+    }
+
+    private EditMessageText deleteFailed(EditMessageText response) {
+        response.setText(messageService.getDeleteFail());
+        return response;
+    }
+
+    public EditMessageText deleteContactConfirmed(String number, EditMessageText response) {
+        if(isInvalidDeleteMessage(number)) {
+            return deleteFailed(response);
         }
-        LOGGER.info("deleteContact: " + message);
-        Optional<Phone> deletedPhone = phoneService.deleteContact(message);
-        if (deletedPhone.isEmpty()) {
+
+        List<Phone> findPhone = phoneService.findAllByPhone(number); // Look for the number
+        if (findPhone.size() == 0) { // If it doesn't exist - we can't delete it
+            return deleteFailed(response);
+        }
+
+        boolean deleteSuccess = phoneService.deleteContact(number);
+        if (!deleteSuccess) {
             response.setText(messageService.getDeleteFail());
             return response;
         }
         response.setText(messageService.getDeleteSuccess());
         return response;
+
+    }
+
+    public PartialBotApiMethod<?> deleteContactQuestion(String message, SendMessage response) {
+        if(isInvalidDeleteMessage(message)) {
+            return deleteFailed(response);
+        }
+
+        String number = phoneService.getPhoneFromMessage(message);
+        List<Phone> findPhones = phoneService.findAllByPhone(number); // Look for the number
+        if (findPhones.size() == 0) { // If it doesn't exist - we can't delete it
+            return deleteFailed(response);
+        }
+
+        StringBuilder textMessage = new StringBuilder();
+        for(Phone temp: findPhones) {
+            textMessage.append("\"").append(temp.getPhone().strip()).append("\"")
+                    .append(" \"").append(temp.getName().strip()).append("\"").append("\n");
+        }
+        textMessage.delete(textMessage.length() - 1, textMessage.length());
+
+        response.setText(String.format(messageService.getDeleteAcknowledge(), textMessage.toString()));
+        response.setReplyMarkup(getDeleteKeyboard(number));
+
+        return response;
+
+        /*boolean deleteSuccess = phoneService.deleteContact(message);
+        if (!deleteSuccess) {
+            response.setText(messageService.getDeleteFail());
+            return response;
+        }
+        response.setText(messageService.getDeleteSuccess());
+        return response;*/
+    }
+
+    private boolean isInvalidDeleteMessage(String message) {
+        return message == null || message.strip().equals("");
+    }
+
+    private InlineKeyboardMarkup getDeleteKeyboard(String number) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        InlineKeyboardButton buttonYes = InlineKeyboardButton
+                .builder()
+                .text("Yes")
+                .callbackData(programVariables.getDeleteCallbackYes() + " " + number)
+                .build();
+        InlineKeyboardButton buttonNo = InlineKeyboardButton
+                .builder()
+                .text("No")
+                .callbackData(programVariables.getDeleteCallbackNo())
+                .build();
+
+        List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
+        rowList.add(new ArrayList<>(List.of(buttonYes, buttonNo)));
+
+        inlineKeyboardMarkup.setKeyboard(rowList);
+        return inlineKeyboardMarkup;
     }
 
     public PartialBotApiMethod<?> listNewContacts(SendMessage response) throws IOException {
         List<NewContact> newContacts = newContactService.getAllNewContacts();
         LOGGER.debug("listNewContacts: " + newContacts);
         if(newContacts.size() == 0) {
-            return null;
+            response.setText(messageService.getBackupNoRecords());
+            return response;
         }
         StringBuilder answer = new StringBuilder();
         if (newContacts.size() < 10) {
             answer.append(messageService.getListText());
             for(NewContact temp: newContacts) {
-                answer.append(temp.getId()).append(". ").append(temp.getPhone());
+                answer.append(temp.getPhone()).append("\n");
             }
             response.setText(answer.toString());
             return response;
         } else {
-            File file = writeToFile(newContacts, "Unknown_phone_numbers.txt");
+            File file = writeToFile(newContacts);
             if (file != null) {
                 String chatId = response.getChatId();
                 Integer messageId = response.getReplyToMessageId();
                 return SendDocument.builder()
                         .chatId(chatId)
                         .replyToMessageId(messageId)
-                        .caption(file.getName())
+                        .caption((newContacts.size() - 1) + " " + programVariables.getUnknownNumbersMsgText())
                         .document(new InputFile(file))
                         .build();
             } else {
@@ -160,24 +250,72 @@ public final class AdminService {
         }
     }
 
-    private File writeToFile(List<NewContact> newContacts, String filePath) {
-        PrintWriter pw = null;
-        File file = null;
-        try {
-            file = new File(filePath);
-            pw = new PrintWriter(new FileOutputStream(file));
-            for(NewContact temp: newContacts) {
-                pw.write(temp.getId() + ". " + temp.getPhone() + "\n");
-            }
-        } catch (IOException ex) {
-            LOGGER.error(ex);
-            ex.printStackTrace();
-        } finally {
-            if (pw != null) {
-                pw.flush();
-                pw.close();
-            }
+    private File writeToFile(List<NewContact> newContacts) throws IOException {
+        File file = new File(programVariables.getUnknownNumbersFilePath());
+        if (file.exists()) {
+            file.delete();
+        }
+        file.createNewFile();
+        List<String[]> contacts = createCsvDataNewContacts(newContacts);
+        try (FileWriter fw = new FileWriter(file); CSVWriter writer = new CSVWriter(fw)) {
+            writer.writeAll(contacts);
+        } catch (IOException e) {
+            LOGGER.error(e);
+            e.printStackTrace();
+            return null;
         }
         return file;
     }
+
+    public PartialBotApiMethod<?> backup(SendMessage response) throws IOException {
+        List<String[]> phones = createCsvDataPhones(phoneService.getAllContacts());
+        if (phones.size() == 0) {
+            response.setText(messageService.getBackupNoRecords());
+            return response;
+        }
+        File file = new File(programVariables.getBackupFilePath());
+        if (file.exists()) {
+            file.delete();
+        }
+        file.createNewFile();
+        try (FileWriter fw = new FileWriter(file); CSVWriter writer = new CSVWriter(fw)) {
+            writer.writeAll(phones);
+        } catch (IOException e) {
+            LOGGER.error(e);
+            e.printStackTrace();
+            response.setText(programVariables.getBackupFail());
+            return response;
+        }
+        String chatId = response.getChatId();
+        Integer messageId = response.getReplyToMessageId();
+        return SendDocument.builder()
+                .chatId(chatId)
+                .replyToMessageId(messageId)
+                .caption(String.format(programVariables.getBackupCaption(), "" + (phones.size() - 1)))
+                .document(new InputFile(file))
+                .build();
+    }
+
+    private List<String[]> createCsvDataPhones(List<Phone> phones) {
+        String[] header = {"id", "phone", "name", "creation date"};
+        List<String[]> list = new ArrayList<>();
+        list.add(header);
+        for(Phone temp: phones) {
+            list.add(new String[] {temp.getId().toString().strip(), temp.getName().strip(), temp.getPhone().strip(),
+                    simpleDateFormat.format(temp.getCreationDate())});
+        }
+        return list;
+    }
+
+    private List<String[]> createCsvDataNewContacts(List<NewContact> newContacts) {
+        String[] header = {"id", "phone", "date"};
+        List<String[]> list = new ArrayList<>();
+        list.add(header);
+        for(NewContact temp: newContacts) {
+            list.add(new String[] {temp.getId().toString().strip(), temp.getPhone().strip(),
+                    simpleDateFormat.format(temp.getInitDate())});
+        }
+        return list;
+    }
+
 }

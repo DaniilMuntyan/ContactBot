@@ -7,10 +7,8 @@ import com.example.demo.service.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Message;
 
 @Component
 public final class CommandHandler {
@@ -59,8 +57,11 @@ public final class CommandHandler {
                 break;
         }
 
-        boolean isAdminCommand = (text.startsWith(Commands.ADD) || text.startsWith(Commands.EDIT) ||
-                text.startsWith(Commands.DELETE) || text.startsWith(Commands.LIST)) && user.isAdminMode();
+        boolean isAdminCommand = (text.startsWith(Commands.ADD) ||
+                text.startsWith(Commands.EDIT) ||
+                text.startsWith(Commands.DELETE) ||
+                text.startsWith(Commands.NEW) ||
+                text.startsWith(Commands.BACKUP)) && user.isAdminMode();
         if(isAdminCommand) { // If command has been received
             return adminHandler.handleAdminCommand(text, user, response);
         }

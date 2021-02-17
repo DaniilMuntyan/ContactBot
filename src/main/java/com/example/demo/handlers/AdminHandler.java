@@ -7,7 +7,6 @@ import com.example.demo.service.MessageService;
 import com.example.demo.service.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
@@ -31,8 +30,9 @@ public final class AdminHandler {
     }
 
     public PartialBotApiMethod<?> handleAuthentication(String text, SendMessage response, User user) {
-        if(text.strip().equals(Commands.ADMIN)) { // If password has not been written after /admin
-            return null;
+        if(user.isAdminMode()) {
+            response.setText(messageService.getAlreadyAdmin());
+            return response;
         }
 
         String password = adminService.getPasswordFromMessage(text);
@@ -63,20 +63,33 @@ public final class AdminHandler {
                 answer = adminService.editContact(stringWithoutCommand, response);
                 break;
             case Commands.DELETE:
-                answer = adminService.deleteContact(stringWithoutCommand, response);
+                answer = adminService.deleteContactQuestion(stringWithoutCommand, response);
                 break;
-            case Commands.LIST:
+            default:
+                break;
+        }
+
+        switch(text) {
+            case Commands.NEW:
                 try {
                     answer = adminService.listNewContacts(response);
-                } catch (IOException ex) {
-                    LOGGER.error(ex);
-                    ex.printStackTrace();
+                } catch (IOException e) {
+                    LOGGER.error(e);
+                    e.printStackTrace();
+                }
+                break;
+            case Commands.BACKUP:
+                try {
+                    answer = adminService.backup(response);
+                } catch (IOException e) {
+                    LOGGER.error(e);
+                    e.printStackTrace();
                 }
                 break;
             default:
                 break;
         }
-        //response.setText(answer);
+
         return answer;
     }
 

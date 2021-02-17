@@ -4,8 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import javax.persistence.*;
+import java.util.Date;
 
 @Data
 @Builder
@@ -22,4 +24,8 @@ public final class NewContact {
 
     @Column(name="phone")
     private String phone;
+
+    @Column(name="init_date")
+    @CreationTimestamp
+    private Date initDate;
 }

@@ -11,6 +11,7 @@ import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -34,19 +35,28 @@ public final class TextHandler {
     // Received phone number
     public PartialBotApiMethod<?> handleText(String text, SendMessage response, User user) {
         LOGGER.info(String.format("handleText: %s", text));
-        Optional<Phone> phone = phoneService.findContact(text);
-
-        if (phone.isEmpty()) {
-            newContactService.saveNewContact(text);
-            response.setText(messageService.getNotFoundMessage());
-        } else {
-            response.setText(phone.get().getName());
-        }
+        List<Phone> contacts = phoneService.findContact(text);
 
         if(user.isAdminMode()) { // If admin sends text to the bot, he/she will be exited from admin mode
             user.setAdminMode(false);
             userService.editAdminMode(user, false);
             LOGGER.info("User " + user.getId() + " exited from admin mode");
+        }
+
+        if (contacts.isEmpty()) {
+            newContactService.saveNewContact(text);
+            response.setText(messageService.getNotFoundMessage());
+        } else {
+            StringBuilder name = new StringBuilder();
+            if (contacts.size() > 1) { // Several names for the number
+                name.append(messageService.getUserPhoneText());
+            }
+            for(Phone temp: contacts) {
+                name.append("\"").append(temp.getName()).append("\"").append("\n");
+            }
+            name.replace(name.length() - 1, name.length(), "");
+            response.setText(name.toString());
+            return response;
         }
 
         return response;
