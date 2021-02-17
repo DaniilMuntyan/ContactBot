@@ -1,6 +1,6 @@
 package com.example.demo.handlers;
 
-import com.example.demo.botapi.ContactTelegramBot;
+import com.example.demo.service.MessageService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

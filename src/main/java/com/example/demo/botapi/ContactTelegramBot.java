@@ -1,6 +1,7 @@
 package com.example.demo.botapi;
 
 import com.example.demo.handlers.UpdateHandler;
+import com.example.demo.service.MessageService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,15 +11,15 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
-import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageMedia;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.io.IOException;
 
 @Component
 @PropertySource("classpath:application.properties")
@@ -67,6 +68,8 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
 
     private final UpdateHandler updateHandler;
 
+    private final MessageService messageService;
+
     @Value("${bot.name}")
     private String botName;
 
@@ -74,9 +77,10 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
     private String botToken;
 
     @Autowired
-    public ContactTelegramBot(UpdateHandler updateHandler) {
+    public ContactTelegramBot(UpdateHandler updateHandler, MessageService messageService) {
         LOGGER.info("ContactTelegramBot is creating...");
         this.updateHandler = updateHandler;
+        this.messageService = messageService;
     }
 
     @Override
@@ -117,7 +121,17 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
             if (update.hasCallbackQuery()) { // If callback is sent, then answer it
                 answerCallback(update.getCallbackQuery());
             }
-            execute((SendMessage) responseApiMethod);
+
+            SendMessage message = (SendMessage) responseApiMethod;
+            String text = message.getText();
+            if (!isValidTextMessageLength(text)) { // If text is too long
+                SendDocument sendDocument = documentFromText(text, update); // Pack it to the file and send
+                if (sendDocument != null) {
+                    execute(sendDocument);
+                }
+            } else {
+                execute(message); // Or else send text message as usual
+            }
         }
         if (responseApiMethod instanceof SendDocument) { // If bot going to send file
             if (chatAction != null) {
@@ -138,7 +152,16 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
             if (update.hasCallbackQuery()) { // If callback is sent, then answer it
                 answerCallback(update.getCallbackQuery());
             }
-            execute((EditMessageText) responseApiMethod);
+            EditMessageText editMessageText = (EditMessageText) responseApiMethod;
+            String text = editMessageText.getText();
+            if (!isValidTextMessageLength(text)) { // If text is too long
+                SendDocument sendDocument = documentFromText(text, update); // Pack it to the file and edit
+                if (sendDocument != null) {
+                    execute(sendDocument);
+                }
+            } else {
+                execute(editMessageText); // Or else edit text message as usual
+            }
         }
     }
 
@@ -154,4 +177,19 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
             ex.printStackTrace();
         }
     }
+
+    private boolean isValidTextMessageLength(String text) {
+        return text.length() < 4096;
+    }
+
+    private SendDocument documentFromText(String text, Update update) {
+        try {
+            return messageService.getFileFromMessage(text, update);
+        } catch (IOException ex) {
+            LOGGER.error(ex);
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
 }

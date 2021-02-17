@@ -64,6 +64,10 @@ public final class AdminService {
     }
 
     private List<String> getPhoneAndName(String message) {
+        LOGGER.info("getPhoneAndName: " + message);
+        if (message.length() == 0 || message.charAt(0) != '\"' || message.charAt(message.length() - 1) != '\"') {
+            return null;
+        }
         int count = 0;
         StringBuilder phone = new StringBuilder();
         StringBuilder name = new StringBuilder();
@@ -221,7 +225,7 @@ public final class AdminService {
         List<NewContact> newContacts = newContactService.getAllNewContacts();
         LOGGER.debug("listNewContacts: " + newContacts);
         if(newContacts.size() == 0) {
-            response.setText(messageService.getBackupNoRecords());
+            response.setText(messageService.getListNoRecords());
             return response;
         }
         StringBuilder answer = new StringBuilder();

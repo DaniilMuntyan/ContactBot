@@ -47,4 +47,12 @@ public final class ProgramVariables {
     @Value("${button.delete.callback.no}")
     @Getter
     private String deleteCallbackNo;
+
+    @Value("${message.file.path}")
+    @Getter
+    private String textMessageFilePath;
+
+    @Value("${message.file.caption}")
+    @Getter
+    private String textMessageFileCaption;
 }

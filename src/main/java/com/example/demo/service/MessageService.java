@@ -1,15 +1,25 @@
 package com.example.demo.service;
 
+import com.example.demo.constants.ProgramVariables;
+import com.opencsv.CSVWriter;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
+import org.telegram.telegrambots.meta.api.objects.Update;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
 
 @Service
 @PropertySource("classpath:messages.properties")
 public class MessageService {
     private static final Logger LOGGER = Logger.getLogger(MessageService.class);
+    private final ProgramVariables programVariables;
 
     @Value("${message.help}")
     @Getter
@@ -95,12 +105,31 @@ public class MessageService {
     @Getter
     private String deleteCancel;
 
-    public MessageService() {
+    public MessageService(ProgramVariables programVariables) {
         LOGGER.info("MessageService is creating...");
+        this.programVariables = programVariables;
     }
 
     public int countWords(String text) {
         String[] arrayString = text.split(" ");
         return arrayString.length;
+    }
+
+    public SendDocument getFileFromMessage(String text, Update update) throws IOException {
+        File file = new File(programVariables.getTextMessageFilePath());
+        if (file.exists()) {
+            file.delete();
+        }
+        file.createNewFile();
+        try (FileWriter writer = new FileWriter(file)) {
+            writer.write(text);
+        }
+
+        return SendDocument
+                .builder()
+                .chatId(update.getMessage().getChatId().toString())
+                .replyToMessageId(update.getMessage().getMessageId())
+                .caption(programVariables.getTextMessageFileCaption())
+                .build();
     }
 }
