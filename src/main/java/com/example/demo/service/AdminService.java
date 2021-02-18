@@ -186,14 +186,6 @@ public final class AdminService {
         response.setReplyMarkup(getDeleteKeyboard(number));
 
         return response;
-
-        /*boolean deleteSuccess = phoneService.deleteContact(message);
-        if (!deleteSuccess) {
-            response.setText(messageService.getDeleteFail());
-            return response;
-        }
-        response.setText(messageService.getDeleteSuccess());
-        return response;*/
     }
 
     private boolean isInvalidDeleteMessage(String message) {
@@ -223,7 +215,6 @@ public final class AdminService {
 
     public PartialBotApiMethod<?> listNewContacts(SendMessage response) throws IOException {
         List<NewContact> newContacts = newContactService.getAllNewContacts();
-        LOGGER.debug("listNewContacts: " + newContacts);
         if(newContacts.size() == 0) {
             response.setText(messageService.getListNoRecords());
             return response;

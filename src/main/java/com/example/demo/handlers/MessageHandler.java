@@ -36,8 +36,7 @@ public final class MessageHandler {
         final Integer messageId = message.getMessageId();
         final String text = message.getText();
         final Long chatId = message.getChatId();
-        LOGGER.info(String.format("handleMessage: %s %s", chatId.toString(), text));
-        LOGGER.info(new Date(message.getDate() * 1000L));
+        //LOGGER.info(String.format("handleMessage: %s %s", chatId.toString(), text));
 
         Optional<User> user = userService.findByChatId(chatId);
         SendMessage response = new SendMessage();
@@ -48,7 +47,7 @@ public final class MessageHandler {
             User newUser = userService.getUserFromMessage(message);
             user = Optional.of(userService.saveUser(newUser));
         } else {
-            LOGGER.info(String.format("New message: %s from User: %s", text, user.get()));
+            //LOGGER.info(String.format("New message: %s from User: %s", text, user.get()));
             if (userService.checkDdos(user.get())) {
                 return null;
             }

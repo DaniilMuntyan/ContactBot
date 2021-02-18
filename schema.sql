@@ -29,6 +29,5 @@ create table "new"(
     id SERIAL,
     phone char(50),
     init_date timestamp with time zone not null default now(),
-    primary key(user_id)
+    primary key(id)
 );
-create index on "user"(id);

@@ -250,7 +250,6 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
             execute((SendDocument) responseApiMethod);
         }
         if (responseApiMethod instanceof EditMessageText) { // If bot going to edit message (with buttons)
-            LOGGER.info("EDIT MESSAGE TEXT");
             if (chatAction != null) {
                 chatAction.setAction(ActionType.TYPING);
                 execute(chatAction);

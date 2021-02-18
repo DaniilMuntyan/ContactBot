@@ -56,7 +56,6 @@ public final class CallbackHandler {
             EditMessageText newMessage = new EditMessageText();
             newMessage.setChatId(callbackQuery.getMessage().getChatId().toString());
             newMessage.setMessageId(callbackQuery.getMessage().getMessageId());
-            //response.setReplyToMessageId(callbackQuery.getMessage().getReplyToMessage().getMessageId());
 
             String[] arrayCallbackData = callbackData.split(" ");
             if (arrayCallbackData.length != 2) {
@@ -70,10 +69,8 @@ public final class CallbackHandler {
 
         if(callbackData.equals(programVariables.getDeleteCallbackNo())) {
             EditMessageText newMessage = new EditMessageText();
-            //SendMessage response = new SendMessage();
             newMessage.setChatId(callbackQuery.getMessage().getChatId().toString());
             newMessage.setMessageId(callbackQuery.getMessage().getMessageId());
-            //response.setReplyToMessageId(callbackQuery.getMessage().getReplyToMessage().getMessageId());
             newMessage.setText(messageService.getDeleteCancel());
             LOGGER.info(newMessage);
 

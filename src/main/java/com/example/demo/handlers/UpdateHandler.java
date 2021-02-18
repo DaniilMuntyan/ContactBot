@@ -1,6 +1,5 @@
 package com.example.demo.handlers;
 
-import com.example.demo.service.MessageService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +32,10 @@ public class UpdateHandler {
             if (update.hasCallbackQuery()) {
                 response = callbackHandler.handleCallback(update.getCallbackQuery());
             }
+        }
+        if (response != null) {
+            LOGGER.info(String.format("Update id: %s. Thread name: %s. Thread id: %s", update.getUpdateId(),
+                    Thread.currentThread().getName(), Thread.currentThread().getId()));
         }
         return response;
     }

@@ -38,7 +38,7 @@ public final class CommandHandler {
                 if (user.isAdminMode()) { // If admin sends /admin, he/she will be exited from admin mode
                     user.setAdminMode(false);
                     userService.editAdminMode(user, false);
-                    LOGGER.info("User " + user.getId() + " exited from admin mode");
+                    //LOGGER.info("User " + user.getId() + " exited from admin mode");
                 }
                 return response;
             case Commands.HELP:
@@ -61,11 +61,14 @@ public final class CommandHandler {
                 text.startsWith(Commands.EDIT) ||
                 text.startsWith(Commands.DELETE) ||
                 text.startsWith(Commands.NEW) ||
-                text.startsWith(Commands.BACKUP)) && user.isAdminMode();
-        if(isAdminCommand) { // If command has been received
-            return adminHandler.handleAdminCommand(text, user, response);
+                text.startsWith(Commands.BACKUP));
+        if (isAdminCommand) { // If command has been received
+            if (user.isAdminMode()) {
+                return adminHandler.handleAdminCommand(text, user, response);
+            } else {
+                return messageService.getYouAreNotAdmin(response);
+            }
         }
-
         return null;
     }
 }

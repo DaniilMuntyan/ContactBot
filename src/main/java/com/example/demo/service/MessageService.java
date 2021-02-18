@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.io.File;
@@ -105,6 +106,10 @@ public class MessageService {
     @Getter
     private String deleteCancel;
 
+    @Value("${message.admin.notAllowed}")
+    @Getter
+    private String adminNotAllowed;
+
     public MessageService(ProgramVariables programVariables) {
         LOGGER.info("MessageService is creating...");
         this.programVariables = programVariables;
@@ -113,6 +118,11 @@ public class MessageService {
     public int countWords(String text) {
         String[] arrayString = text.split(" ");
         return arrayString.length;
+    }
+
+    public SendMessage getYouAreNotAdmin(SendMessage response) {
+        response.setText(adminNotAllowed);
+        return response;
     }
 
     public SendDocument getFileFromMessage(String text, Update update) throws IOException {
