@@ -7,9 +7,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.ActionType;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
@@ -21,15 +27,15 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
 
-@Component
+//@Component
 @PropertySource("classpath:application.properties")
+@RestController
 /*public class ContactTelegramBot extends TelegramWebhookBot {
     private static final Logger LOGGER = Logger.getLogger(ContactTelegramBot.class);
 
-    private final UpdateService updateService;
+    private final UpdateHandler updateHandler;
 
-    @Value("${bot.webhook}")
-    private String webhookPath;
+    private final MessageService messageService;
 
     @Value("${bot.name}")
     private String botName;
@@ -37,10 +43,14 @@ import java.io.IOException;
     @Value("${bot.token}")
     private String botToken;
 
+    @Value("${bot.webhook}")
+    private String webhookPath;
+
     @Autowired
-    public ContactTelegramBot(UpdateService updateService) {
+    public ContactTelegramBot(UpdateHandler updateHandler, MessageService messageService) {
         LOGGER.info("ContactTelegramBot is creating...");
-        this.updateService = updateService;
+        this.updateHandler = updateHandler;
+        this.messageService = messageService;
     }
 
     @Override
@@ -54,13 +64,109 @@ import java.io.IOException;
     }
 
     @Override
-    public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
-        return updateService.updateHandler(this, update);
+    public String getBotPath() {
+        return webhookPath;
     }
 
     @Override
-    public String getBotPath() {
-        return webhookPath;
+    public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
+        try {
+            SendChatAction chatAction = null;
+            if (update.hasMessage()) {
+                chatAction = new SendChatAction();
+                chatAction.setChatId(update.getMessage().getChatId().toString());
+            }
+            PartialBotApiMethod<?> resultApiMethod = updateHandler.updateHandler(update);
+            return responseApiMethod(update, resultApiMethod, chatAction);
+        } catch (TelegramApiException ex) {
+            LOGGER.error(ex);
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
+    private BotApiMethod<?> responseApiMethod(Update update, PartialBotApiMethod<?> responseApiMethod, SendChatAction chatAction)
+            throws TelegramApiException {
+        if (responseApiMethod instanceof SendMessage) { // If bot going to send text message
+            if (chatAction != null) {
+                chatAction.setAction(ActionType.TYPING);
+                execute(chatAction);
+            }
+            if (update.hasCallbackQuery()) { // If callback is sent, then answer it
+                answerCallback(update.getCallbackQuery());
+            }
+
+            SendMessage message = (SendMessage) responseApiMethod;
+            String text = message.getText();
+            if (!isValidTextMessageLength(text)) { // If text is too long
+                SendDocument sendDocument = documentFromText(text, update); // Pack it to the file and send
+                if (sendDocument != null) {
+                    execute(sendDocument);
+                    return null;
+                }
+            } else {
+                return message; // Or else send text message as usual
+            }
+        }
+        if (responseApiMethod instanceof SendDocument) { // If bot going to send file
+            if (chatAction != null) {
+                chatAction.setAction(ActionType.UPLOADDOCUMENT);
+                execute(chatAction);
+            }
+            if (update.hasCallbackQuery()) { // If callback is sent, then answer it
+                answerCallback(update.getCallbackQuery());
+            }
+            execute((SendDocument) responseApiMethod);
+            return null;
+        }
+        if (responseApiMethod instanceof EditMessageText) { // If bot going to edit message (with buttons)
+            if (chatAction != null) {
+                chatAction.setAction(ActionType.TYPING);
+                execute(chatAction);
+            }
+            if (update.hasCallbackQuery()) { // If callback is sent, then answer it
+                answerCallback(update.getCallbackQuery());
+            }
+            EditMessageText editMessageText = (EditMessageText) responseApiMethod;
+            String text = editMessageText.getText();
+            if (!isValidTextMessageLength(text)) { // If text is too long
+                SendDocument sendDocument = documentFromText(text, update);
+                if (sendDocument != null) {
+                    execute(sendDocument);
+                }
+                return null;
+            } else {
+                return editMessageText; // Or else edit text message as usual
+            }
+        }
+        return null;
+    }
+
+    // In order to take callback circle away from the button
+    private void answerCallback(CallbackQuery callbackQuery) {
+        AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
+        answerCallbackQuery.setCallbackQueryId(callbackQuery.getId());
+        answerCallbackQuery.setShowAlert(false);
+        try {
+            execute(answerCallbackQuery);
+        } catch (TelegramApiException ex) {
+            LOGGER.error(ex);
+            ex.printStackTrace();
+        }
+    }
+
+    private boolean isValidTextMessageLength(String text) {
+        return text.length() < 4096;
+    }
+
+    private SendDocument documentFromText(String text, Update update) {
+        try {
+            return messageService.getFileFromMessage(text, update);
+        } catch (IOException ex) {
+            LOGGER.error(ex);
+            ex.printStackTrace();
+        }
+        return null;
     }
 }*/
 public class ContactTelegramBot extends TelegramLongPollingBot {
@@ -191,5 +297,4 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
         }
         return null;
     }
-
 }
