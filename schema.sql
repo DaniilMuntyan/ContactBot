@@ -27,7 +27,7 @@ create index on "user"(chat_id);
 DROP TABLE IF EXISTS "new";
 create table "new"(
     id SERIAL,
-    phone char(50),
+    phone char(50) UNIQUE,
     init_date timestamp with time zone not null default now(),
     primary key(id)
 );

@@ -30,9 +30,8 @@ public final class NewContactService {
                 return;
             }
         }
-        NewContact newContact = NewContact.builder().phone(number).build();
-        NewContact savedContact = this.newContactRepository.save(newContact);
-        LOGGER.info("Saved new contact: " + savedContact);
+        this.newContactRepository.insertIfNotExist(number);
+        LOGGER.info("Saved new contact: " + number);
     }
 
     public List<NewContact> getAllNewContacts() {
