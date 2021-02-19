@@ -1,7 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.constants.ProgramVariables;
-import com.example.demo.model.NewContact;
+import com.example.demo.model.UnknownPhone;
 import com.example.demo.model.Phone;
 import com.example.demo.model.User;
 import com.opencsv.CSVWriter;
@@ -14,17 +14,14 @@ import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.io.*;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public final class AdminService {
@@ -99,7 +96,7 @@ public final class AdminService {
         return Arrays.asList(phone.toString(), name.toString());
     }
 
-    public SendMessage addContact(String message, SendMessage response) {
+    public SendMessage addContact(String message, SendMessage response, User creator) {
         List<String> phoneAndName = getPhoneAndName(message);
 
         if(phoneAndName == null) {
@@ -110,12 +107,12 @@ public final class AdminService {
         String phone = phoneAndName.get(0);
         String name = phoneAndName.get(1);
 
-        phoneService.saveContact(phone, name);
+        phoneService.saveContact(phone, name, creator);
         response.setText(messageService.getAddSuccess());
         return response;
     }
 
-    public SendMessage editContact(String message, SendMessage response) {
+    public SendMessage editContact(String message, SendMessage response, User editor) {
         List<String> phoneAndName = getPhoneAndName(message);
         if (phoneAndName == null) {
             response.setText(messageService.getEditFail());
@@ -125,7 +122,7 @@ public final class AdminService {
         String phone = phoneAndName.get(0);
         String name = phoneAndName.get(1);
 
-        boolean successEdit = phoneService.editContact(phone, name);
+        boolean successEdit = phoneService.editContact(phone, name, editor);
         if (successEdit) {
             response.setText(messageService.getEditSuccess());
         } else {
@@ -214,28 +211,28 @@ public final class AdminService {
     }
 
     public PartialBotApiMethod<?> listNewContacts(SendMessage response) throws IOException {
-        List<NewContact> newContacts = newContactService.getAllNewContacts();
-        if(newContacts.size() == 0) {
+        List<UnknownPhone> unknownPhones = newContactService.getAllNewContacts();
+        if(unknownPhones.size() == 0) {
             response.setText(messageService.getListNoRecords());
             return response;
         }
         StringBuilder answer = new StringBuilder();
-        if (newContacts.size() < 10) {
+        if (unknownPhones.size() < 10) {
             answer.append(messageService.getListText());
-            for(NewContact temp: newContacts) {
+            for(UnknownPhone temp: unknownPhones) {
                 answer.append(temp.getPhone()).append("\n");
             }
             response.setText(answer.toString());
             return response;
         } else {
-            File file = writeToFile(newContacts);
+            File file = writeToFile(unknownPhones);
             if (file != null) {
                 String chatId = response.getChatId();
                 Integer messageId = response.getReplyToMessageId();
                 return SendDocument.builder()
                         .chatId(chatId)
                         .replyToMessageId(messageId)
-                        .caption((newContacts.size() - 1) + " " + programVariables.getUnknownNumbersMsgText())
+                        .caption((unknownPhones.size() - 1) + " " + programVariables.getUnknownNumbersMsgText())
                         .document(new InputFile(file))
                         .build();
             } else {
@@ -245,13 +242,13 @@ public final class AdminService {
         }
     }
 
-    private File writeToFile(List<NewContact> newContacts) throws IOException {
+    private File writeToFile(List<UnknownPhone> unknownPhones) throws IOException {
         File file = new File(programVariables.getUnknownNumbersFilePath());
         if (file.exists()) {
             file.delete();
         }
         file.createNewFile();
-        List<String[]> contacts = createCsvDataNewContacts(newContacts);
+        List<String[]> contacts = createCsvDataNewContacts(unknownPhones);
         try (FileWriter fw = new FileWriter(file); CSVWriter writer = new CSVWriter(fw)) {
             writer.writeAll(contacts);
         } catch (IOException e) {
@@ -292,23 +289,25 @@ public final class AdminService {
     }
 
     private List<String[]> createCsvDataPhones(List<Phone> phones) {
-        String[] header = {"id", "phone", "name", "creation date"};
+        String[] header = {"id", "phone", "name", "created at", "updated at",
+                "created by", "updated by"};
         List<String[]> list = new ArrayList<>();
         list.add(header);
         for(Phone temp: phones) {
-            list.add(new String[] {temp.getId().toString().trim(), temp.getName().trim(), temp.getPhone().trim(),
-                    simpleDateFormat.format(temp.getCreationDate())});
+            list.add(new String[] {temp.getId().toString().trim(), temp.getPhone().trim(), temp.getName().trim(),
+                    simpleDateFormat.format(temp.getCreatedAt()), simpleDateFormat.format(temp.getUpdatedAt()),
+                    temp.getCreator().getName(), temp.getEditor().getName()});
         }
         return list;
     }
 
-    private List<String[]> createCsvDataNewContacts(List<NewContact> newContacts) {
-        String[] header = {"id", "phone", "date"};
+    private List<String[]> createCsvDataNewContacts(List<UnknownPhone> unknownPhones) {
+        String[] header = {"id", "phone", "created at", "created by"};
         List<String[]> list = new ArrayList<>();
         list.add(header);
-        for(NewContact temp: newContacts) {
+        for(UnknownPhone temp: unknownPhones) {
             list.add(new String[] {temp.getId().toString().trim(), temp.getPhone().trim(),
-                    simpleDateFormat.format(temp.getInitDate())});
+                    simpleDateFormat.format(temp.getCreatedAt()), temp.getCreator().getName()});
         }
         return list;
     }

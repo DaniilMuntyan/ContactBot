@@ -22,14 +22,6 @@ public final class UserService {
         this.userRepository = userRepository;
     }
 
-    public Optional<User> findUserByFirstname(String firstname) {
-        return userRepository.findByFirstname(firstname);
-    }
-
-    public Optional<User> findUserByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
     public Optional<User> findByChatId(Long id) {
         return this.userRepository.findByChatId(id);
     }

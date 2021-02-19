@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 
 import javax.persistence.*;
@@ -29,14 +30,31 @@ public final class Phone {
     @Column(name="name")
     private String name;
 
-    @Column(name="init_date")
+    @JoinColumn(name = "created_at")
     @CreationTimestamp
-    private Date creationDate;
+    private Date createdAt;
+
+    @Column(name="updated_at")
+    @CreationTimestamp
+    private Date updatedAt;
+
+    @ManyToOne//(cascade = CascadeType.ALL)
+    @JoinColumn(name = "created_by")
+    private User creator;
+
+    @ManyToOne//(cascade = CascadeType.ALL)
+    @JoinColumn(name = "updated_by")
+    private User editor;
 
     public Phone(Contact contact) {
         this.phone = contact.getPhoneNumber();
         this.name = "";
         this.name += contact.getFirstName() != null ? contact.getFirstName() + " " : "";
         this.name += contact.getLastName() != null ? contact.getLastName() + " " : "";
+    }
+
+    public Phone(Contact contact, User creator) {
+        this(contact);
+        this.creator = creator;
     }
 }

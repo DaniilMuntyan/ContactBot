@@ -44,7 +44,7 @@ public final class TextHandler {
         }
 
         if (contacts.isEmpty()) {
-            newContactService.saveNewContact(text);
+            newContactService.saveNewContact(text, user);
             response.setText(messageService.getNotFoundMessage());
         } else {
             StringBuilder name = new StringBuilder();
@@ -69,7 +69,7 @@ public final class TextHandler {
             return null;
         }
 
-        phoneService.saveContact(contact);
+        phoneService.saveContact(contact, user);
         response.setText(messageService.getAddSuccess());
         return response;
     }

@@ -15,7 +15,7 @@ import java.util.Date;
 @AllArgsConstructor
 @Table(name="new", schema="public")
 @Entity
-public final class NewContact {
+public final class UnknownPhone {
     @Id
     @SequenceGenerator(name = "NEW_SEQUENCE", sequenceName = "new_id_seq", allocationSize = 1)
     @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "NEW_SEQUENCE")
@@ -25,7 +25,11 @@ public final class NewContact {
     @Column(name="phone")
     private String phone;
 
-    @Column(name="init_date")
+    @Column(name="created_at")
     @CreationTimestamp
-    private Date initDate;
+    private Date createdAt;
+
+    @ManyToOne//(cascade = CascadeType.ALL)
+    @JoinColumn(name = "created_by")
+    private User creator;
 }

@@ -57,10 +57,10 @@ public final class AdminHandler {
 
         switch(command) {
             case Commands.ADD:
-                answer = adminService.addContact(stringWithoutCommand, response);
+                answer = adminService.addContact(stringWithoutCommand, response, user);
                 break;
             case Commands.EDIT:
-                answer = adminService.editContact(stringWithoutCommand, response);
+                answer = adminService.editContact(stringWithoutCommand, response, user);
                 break;
             case Commands.DELETE:
                 answer = adminService.deleteContactQuestion(stringWithoutCommand, response);

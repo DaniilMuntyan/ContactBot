@@ -34,9 +34,9 @@ public final class User {
     @Column(name="username")
     private String username;
 
-    @Column(name="init_date")
+    @Column(name="created_at")
     @CreationTimestamp
-    private Date initDate;
+    private Date createdAt;
 
     @Column(name="last_action")
     @CreationTimestamp
@@ -59,5 +59,19 @@ public final class User {
         this.lastName = message.getFrom().getLastName();
         this.username = message.getFrom().getUserName();
         this.adminMode = false;
+    }
+
+    public String getName() {
+        String name = "";
+        if (this.firstName != null) {
+            name += this.firstName;
+        }
+        if (this.lastName != null) {
+            name += " " + this.lastName;
+        }
+        if (this.username != null) {
+            name += " (@" + this.username + ")";
+        }
+        return name;
     }
 }
