@@ -110,6 +110,10 @@ public class MessageService {
     @Getter
     private String adminNotAllowed;
 
+    @Value("${message.admin.stat.fail}")
+    @Getter
+    private String adminStatFail;
+
     public MessageService(ProgramVariables programVariables) {
         LOGGER.info("MessageService is creating...");
         this.programVariables = programVariables;

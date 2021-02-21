@@ -33,10 +33,10 @@ public class UpdateHandler {
                 response = callbackHandler.handleCallback(update.getCallbackQuery());
             }
         }
-        if (response != null) {
+        /*if (response != null) {
             LOGGER.info(String.format("Update id: %s. Thread name: %s. Thread id: %s", update.getUpdateId(),
                     Thread.currentThread().getName(), Thread.currentThread().getId()));
-        }
+        }*/
         return response;
     }
 }

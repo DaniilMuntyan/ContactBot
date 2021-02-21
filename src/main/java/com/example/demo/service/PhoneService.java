@@ -8,6 +8,8 @@ import org.apache.log4j.Logger;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -89,6 +91,10 @@ public final class PhoneService {
         }
         phoneRepository.editContact(phone, name, editor);
         return true;
+    }
+
+    public List<Phone> stat(Date xDaysBefore, Date today) {
+        return phoneRepository.findAllByCreatedAtBetween(xDaysBefore, today);
     }
 
     public List<Phone> getAllContacts() {

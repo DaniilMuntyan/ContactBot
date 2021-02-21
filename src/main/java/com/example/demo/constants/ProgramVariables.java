@@ -55,4 +55,13 @@ public final class ProgramVariables {
     @Value("${message.file.caption}")
     @Getter
     private String textMessageFileCaption;
+
+    @Value("${statistics.file}")
+    @Getter
+    private String statFilePath;
+
+    @Value("${statistics.file.caption}")
+    @Getter
+    private String statFileCaption;
+
 }

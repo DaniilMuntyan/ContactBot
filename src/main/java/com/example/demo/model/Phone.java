@@ -56,5 +56,11 @@ public final class Phone {
     public Phone(Contact contact, User creator) {
         this(contact);
         this.creator = creator;
+        this.editor = creator;
+    }
+
+    public String getPhoneUser() {
+        return this.phone + "\n" + this.name + "\n" + this.creator.getFirstName() + "\n" + this.creator.getLastName() +
+                "\n" + this.creator.getUsername();
     }
 }

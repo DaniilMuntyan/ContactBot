@@ -65,6 +65,10 @@ public final class AdminHandler {
             case Commands.DELETE:
                 answer = adminService.deleteContactQuestion(stringWithoutCommand, response);
                 break;
+            case Commands.STAT:
+                LOGGER.info("stringWithoutCommand: " + stringWithoutCommand);
+                answer = adminService.stat(stringWithoutCommand, response);
+                break;
             default:
                 break;
         }

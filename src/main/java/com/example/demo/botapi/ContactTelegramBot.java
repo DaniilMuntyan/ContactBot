@@ -1,5 +1,6 @@
 package com.example.demo.botapi;
 
+import com.example.demo.handlers.MyThread;
 import com.example.demo.handlers.UpdateHandler;
 import com.example.demo.service.MessageService;
 import org.apache.log4j.Logger;
@@ -202,6 +203,7 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         try {
+            long start = System.currentTimeMillis();
             SendChatAction chatAction = null;
             if(update.hasMessage()) {
                 chatAction = new SendChatAction();
@@ -209,8 +211,9 @@ public class ContactTelegramBot extends TelegramLongPollingBot {
             }
 
             PartialBotApiMethod<?> responseApiMethod = updateHandler.updateHandler(update);
+            long end = System.currentTimeMillis();
             executeApiMethod(update, responseApiMethod, chatAction); // Depending on PartialApiMethod object type
-
+            LOGGER.info("Computation time: " + (end - start) / 1000 + " sec");
         } catch (TelegramApiException e) {
             LOGGER.error(e);
             e.printStackTrace();

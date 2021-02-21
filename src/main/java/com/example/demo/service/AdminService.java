@@ -5,6 +5,7 @@ import com.example.demo.model.UnknownPhone;
 import com.example.demo.model.Phone;
 import com.example.demo.model.User;
 import com.opencsv.CSVWriter;
+import org.apache.http.client.utils.DateUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +20,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 
 import java.io.*;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 public final class AdminService {
@@ -185,6 +185,65 @@ public final class AdminService {
         return response;
     }
 
+    private SendMessage statFailed(SendMessage response) {
+        response.setText(messageService.getAdminStatFail());
+        return response;
+    }
+
+    public PartialBotApiMethod<?> stat(String message, SendMessage response) {
+        if(!message.isEmpty()) {
+            return statFailed(response);
+        }
+        Date today = new Date();
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, -1);
+        Date before = cal.getTime();
+        List<Phone> allPhonesLastDays = phoneService.stat(before, today);
+        try {
+            File csvData = writeStatCsv(allPhonesLastDays);
+            if (csvData != null) {
+                String chatId = response.getChatId();
+                Integer messageId = response.getReplyToMessageId();
+                return SendDocument.builder()
+                        .chatId(chatId)
+                        .replyToMessageId(messageId)
+                        .document(new InputFile(csvData))
+                        .caption(programVariables.getStatFileCaption())
+                        .build();
+            }
+        } catch (IOException e) {
+            LOGGER.error(e);
+            e.printStackTrace();
+        }
+        return statFailed(response);
+    }
+
+    private File writeStatCsv(List<Phone> allPhonesLastDays) throws IOException {
+        File file = new File(programVariables.getStatFilePath());
+        if (file.exists()) {
+            file.delete();
+        }
+        file.createNewFile();
+
+        String[] header = {"creator user id", "firstname", "lastname", "username", "phone", "name", "created at"};
+        List<String[]> csvPhones = new ArrayList<>();
+        csvPhones.add(header);
+        for(Phone phone: allPhonesLastDays) {
+            User creator = phone.getCreator();
+            csvPhones.add(new String[] {creator.getId().toString(), creator.getFirstName(), creator.getLastName(),
+            creator.getUsername(), phone.getPhone().trim(), phone.getName(), simpleDateFormat.format(phone.getCreatedAt())});
+        }
+
+        try (FileWriter fw = new FileWriter(file); CSVWriter writer = new CSVWriter(fw)) {
+            writer.writeAll(csvPhones);
+        } catch (IOException e) {
+            LOGGER.error(e);
+            e.printStackTrace();
+            return null;
+        }
+        return file;
+    }
+
     private boolean isInvalidDeleteMessage(String message) {
         return message == null || message.trim().equals("");
     }
@@ -225,7 +284,7 @@ public final class AdminService {
             response.setText(answer.toString());
             return response;
         } else {
-            File file = writeToFile(unknownPhones);
+            File file = writeUnknownToFile(unknownPhones);
             if (file != null) {
                 String chatId = response.getChatId();
                 Integer messageId = response.getReplyToMessageId();
@@ -242,7 +301,7 @@ public final class AdminService {
         }
     }
 
-    private File writeToFile(List<UnknownPhone> unknownPhones) throws IOException {
+    private File writeUnknownToFile(List<UnknownPhone> unknownPhones) throws IOException {
         File file = new File(programVariables.getUnknownNumbersFilePath());
         if (file.exists()) {
             file.delete();

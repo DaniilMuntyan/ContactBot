@@ -47,7 +47,6 @@ public final class MessageHandler {
             User newUser = userService.getUserFromMessage(message);
             user = Optional.of(userService.saveUser(newUser));
         } else {
-            //LOGGER.info(String.format("New message: %s from User: %s", text, user.get()));
             if (userService.checkDdos(user.get())) {
                 return null;
             }
