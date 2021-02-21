@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.demo.service.model;
 
 import com.example.demo.model.UnknownPhone;
 import com.example.demo.model.User;

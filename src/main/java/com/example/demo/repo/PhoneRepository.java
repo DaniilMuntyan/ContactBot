@@ -17,6 +17,8 @@ import java.util.List;
 public interface PhoneRepository extends JpaRepository<Phone, Long> {
     List<Phone> findAllByPhone(String phone);
 
+    List<Phone> findAllByCreatedAtBetween(Date xDaysBefore, Date today);
+
     @Transactional
     @Modifying
     @Query(SqlCommands.phoneEditContact)
@@ -26,9 +28,4 @@ public interface PhoneRepository extends JpaRepository<Phone, Long> {
     @Modifying
     @Query(SqlCommands.phoneDeleteByPhone)
     void deleteByPhone(String phone);
-
-    List<Phone> findAllByCreatedAtBetween(Date xDaysBefore, Date today);
-
-    /*@Query("SELECT p FROM Phone p WHERE p.createdAt > current_date - interval ?1")
-    List<Phone> stat(String days);*/
 }

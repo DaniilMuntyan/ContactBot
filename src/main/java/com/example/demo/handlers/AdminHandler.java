@@ -4,8 +4,9 @@ import com.example.demo.constants.Commands;
 import com.example.demo.model.User;
 import com.example.demo.service.AdminService;
 import com.example.demo.service.MessageService;
-import com.example.demo.service.UserService;
+import com.example.demo.service.model.UserService;
 import org.apache.log4j.Logger;
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -18,34 +19,10 @@ public final class AdminHandler {
     private static final Logger LOGGER = Logger.getLogger(AdminHandler.class);
 
     private final AdminService adminService;
-    private final MessageService messageService;
-    private final UserService userService;
 
-
-    public AdminHandler(AdminService adminService, MessageService messageService, UserService userService) {
+    public AdminHandler(AdminService adminService) {
         LOGGER.info("AdminHandler is creating...");
         this.adminService = adminService;
-        this.messageService = messageService;
-        this.userService = userService;
-    }
-
-    public PartialBotApiMethod<?> handleAuthentication(String text, SendMessage response, User user) {
-        if(user.isAdminMode()) {
-            response.setText(messageService.getAlreadyAdmin());
-            return response;
-        }
-
-        String password = adminService.getPasswordFromMessage(text);
-
-        if(adminService.checkAuthentication(password)) { // If password is right
-            response.setText(messageService.getHelloAdmin());
-            user.setAdminMode(true);
-            userService.editAdminMode(user, true);
-        } else {
-            response.setText(messageService.getWrongAdminPassword());
-        }
-
-        return response;
     }
 
     public PartialBotApiMethod<?> handleAdminCommand(String text, User user, SendMessage response) {
@@ -76,7 +53,7 @@ public final class AdminHandler {
         switch(text) {
             case Commands.NEW:
                 try {
-                    answer = adminService.listNewContacts(response);
+                    answer = adminService.unknownContacts(response);
                 } catch (IOException e) {
                     LOGGER.error(e);
                     e.printStackTrace();
@@ -93,8 +70,6 @@ public final class AdminHandler {
             default:
                 break;
         }
-
         return answer;
     }
-
 }

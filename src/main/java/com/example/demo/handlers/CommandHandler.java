@@ -2,8 +2,9 @@ package com.example.demo.handlers;
 
 import com.example.demo.constants.Commands;
 import com.example.demo.model.User;
+import com.example.demo.service.AdminService;
 import com.example.demo.service.MessageService;
-import com.example.demo.service.UserService;
+import com.example.demo.service.model.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,20 +17,22 @@ public final class CommandHandler {
 
     private final MessageService messageService;
     private final AdminHandler adminHandler;
+    private final AdminService adminService;
     private final UserService userService;
 
     @Autowired
-    public CommandHandler(MessageService messageService, AdminHandler adminHandler, UserService userService) {
+    public CommandHandler(MessageService messageService, AdminHandler adminHandler, AdminService adminService, UserService userService) {
         LOGGER.info("CommandHandler is creating...");
         this.userService = userService;
         this.messageService = messageService;
         this.adminHandler = adminHandler;
+        this.adminService = adminService;
     }
 
     public PartialBotApiMethod<?> handleCommand(String text, User user, SendMessage response) {
         LOGGER.info(String.format("handleCommand: %s %s", user.getChatId(), text));
         if((text.startsWith(Commands.ADMIN) && messageService.countWords(text) == 2)) {
-            return adminHandler.handleAuthentication(text, response, user);
+            return adminService.handleAuthentication(text, response, user);
         }
 
         switch(text) {

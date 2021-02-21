@@ -9,11 +9,13 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -129,7 +131,7 @@ public class MessageService {
         return response;
     }
 
-    public SendDocument getFileFromMessage(String text, Update update) throws IOException {
+    public SendDocument getFileWithText(String text, Update update) throws IOException {
         File file = new File(programVariables.getTextMessageFilePath());
         if (file.exists()) {
             file.delete();
@@ -143,7 +145,41 @@ public class MessageService {
                 .builder()
                 .chatId(update.getMessage().getChatId().toString())
                 .replyToMessageId(update.getMessage().getMessageId())
+                .document(new InputFile(file, programVariables.getTextMessageFileName()))
                 .caption(programVariables.getTextMessageFileCaption())
                 .build();
+    }
+
+    public List<String> getPhoneAndName(String message) {
+        if (message.length() == 0 || message.charAt(0) != '\"' || message.charAt(message.length() - 1) != '\"') {
+            return null;
+        }
+        int count = 0;
+        StringBuilder phone = new StringBuilder();
+        StringBuilder name = new StringBuilder();
+        char c;
+        for(int i = 0; i < message.length(); ++i) {
+            c = message.charAt(i);
+            if (c == '\"') {
+                count++;
+                continue;
+            }
+            switch (count) {
+                case 1: // First quote occurrence
+                    if (Character.isLetter(c)) { // Phone number consists of only digits and '+' '-'
+                        return null;
+                    }
+                    phone.append(c);
+                    break;
+                case 3: // Third quote occurrence
+                    name.append(c);
+            }
+        }
+
+        if (count != 4 || phone.toString().trim().isEmpty() || name.toString().trim().isEmpty()) {
+            return null; // Supposed to be 4 quote symbols
+        }
+
+        return Arrays.asList(phone.toString(), name.toString());
     }
 }
