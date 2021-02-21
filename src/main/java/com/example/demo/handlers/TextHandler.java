@@ -41,9 +41,7 @@ public final class TextHandler {
         if(user.isAdminMode()) { // If admin sends text to the bot, he/she will be exited from admin mode
             user.setAdminMode(false);
             userService.editAdminMode(user, false);
-            //LOGGER.info("User " + user.getId() + " exited from admin mode");
         }
-
         if (contacts.isEmpty()) {
             newContactService.saveNewContact(text, user);
             response.setText(messageService.getNotFoundMessage());
