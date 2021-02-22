@@ -2,14 +2,13 @@ package com.example.demo.handlers;
 
 import com.example.demo.constants.Commands;
 import com.example.demo.model.User;
-import com.example.demo.service.UserService;
+import com.example.demo.service.model.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 

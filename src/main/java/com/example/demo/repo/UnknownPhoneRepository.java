@@ -13,7 +13,6 @@ import java.util.Optional;
 
 @Repository
 public interface UnknownPhoneRepository extends JpaRepository<UnknownPhone, Long> {
-    @Transactional
     @Query(SqlCommands.unknownFindByPhone)
     Optional<UnknownPhone> findByPhone(String phone);
 

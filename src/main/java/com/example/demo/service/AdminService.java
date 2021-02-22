@@ -1,374 +1,73 @@
 package com.example.demo.service;
 
-import com.example.demo.constants.ProgramVariables;
-import com.example.demo.model.UnknownPhone;
-import com.example.demo.model.Phone;
 import com.example.demo.model.User;
-import com.opencsv.CSVWriter;
-import org.apache.http.client.utils.DateUtils;
+import com.example.demo.service.commands.*;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.io.*;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.util.*;
 
 @Service
-public final class AdminService {
+public class AdminService {
     private static final Logger LOGGER = Logger.getLogger(AdminService.class);
 
-    private final MessageService messageService;
-    private final PhoneService phoneService;
-    private final NewContactService newContactService;
-    private final ProgramVariables programVariables;
-
-    private final SimpleDateFormat simpleDateFormat;
-
-    @Value("${ADMIN_PASSWORD}")
-    private String password;
+    private final StatisticsService statisticsService;
+    private final AddService addService;
+    private final EditService editService;
+    private final DeleteService deleteService;
+    private final UnknownContactsService unknownContactsService;
+    private final BackupService backupService;
+    private final AuthenticationService authenticationService;
 
     @Autowired
-    public AdminService(MessageService messageService, PhoneService phoneService, NewContactService newContactService, ProgramVariables programVariables) {
+    public AdminService(StatisticsService statisticsService, AddService addService, EditService editService, DeleteService deleteService, UnknownContactsService unknownContactsService, BackupService backupService, AuthenticationService authenticationService) {
         LOGGER.info("AdminService is creating...");
-        this.newContactService = newContactService;
-        this.phoneService = phoneService;
-        this.messageService = messageService;
-        this.programVariables = programVariables;
-        this.simpleDateFormat = new SimpleDateFormat(programVariables.getDateFormat());
+        this.addService = addService;
+        this.editService = editService;
+        this.deleteService = deleteService;
+        this.unknownContactsService = unknownContactsService;
+        this.backupService = backupService;
+        this.statisticsService = statisticsService;
+        this.authenticationService = authenticationService;
     }
 
-    public String getPasswordFromMessage(String text) {
-        String[] arrayString = text.split(" ");
-        return arrayString[1].trim();
+    public PartialBotApiMethod<?> handleAuthentication(String text, SendMessage response, User user) {
+        return authenticationService.handleAuthentication(text, response, user);
     }
 
-    public boolean checkAuthentication(User user) {
+    public boolean checkAuthenticated(User user) {
         return user.isAdminMode();
     }
 
-    public boolean checkAuthentication(String text) {
-        return this.password.trim().equals(text.trim());
-    }
-
-    private List<String> getPhoneAndName(String message) {
-        LOGGER.info("getPhoneAndName: " + message);
-        if (message.length() == 0 || message.charAt(0) != '\"' || message.charAt(message.length() - 1) != '\"') {
-            return null;
-        }
-        int count = 0;
-        StringBuilder phone = new StringBuilder();
-        StringBuilder name = new StringBuilder();
-        char c;
-        for(int i = 0; i < message.length(); ++i) {
-            c = message.charAt(i);
-            if (c == '\"') {
-                count++;
-                continue;
-            }
-            switch (count) {
-                case 1: // First quote occurrence
-                    if (Character.isLetter(c)) { // Phone number consists of only digits and '+' '-'
-                        return null;
-                    }
-                    phone.append(c);
-                    break;
-                case 3: // Third quote occurrence
-                    name.append(c);
-            }
-        }
-        LOGGER.info("getPhoneAndName: " + phone + " " + name);
-
-        // Supposed to be 4 quote symbols
-        if (count != 4 || phone.toString().trim().isEmpty() || name.toString().trim().isEmpty()) {
-            return null;
-        }
-
-        return Arrays.asList(phone.toString(), name.toString());
-    }
-
     public SendMessage addContact(String message, SendMessage response, User creator) {
-        List<String> phoneAndName = getPhoneAndName(message);
-
-        if(phoneAndName == null) {
-            response.setText(messageService.getWrongAddCommand());
-            return response;
-        }
-
-        String phone = phoneAndName.get(0);
-        String name = phoneAndName.get(1);
-
-        phoneService.saveContact(phone, name, creator);
-        response.setText(messageService.getAddSuccess());
-        return response;
+        return addService.addContact(message, response, creator);
     }
 
     public SendMessage editContact(String message, SendMessage response, User editor) {
-        List<String> phoneAndName = getPhoneAndName(message);
-        if (phoneAndName == null) {
-            response.setText(messageService.getEditFail());
-            return response;
-        }
-
-        String phone = phoneAndName.get(0);
-        String name = phoneAndName.get(1);
-
-        boolean successEdit = phoneService.editContact(phone, name, editor);
-        if (successEdit) {
-            response.setText(messageService.getEditSuccess());
-        } else {
-            response.setText(messageService.getEditFail());
-        }
-        return response;
-    }
-
-    private SendMessage deleteFailed(SendMessage response) {
-        response.setText(messageService.getDeleteFail());
-        return response;
-    }
-
-    private EditMessageText deleteFailed(EditMessageText response) {
-        response.setText(messageService.getDeleteFail());
-        return response;
+        return editService.editContact(message, response, editor);
     }
 
     public EditMessageText deleteContactConfirmed(String number, EditMessageText response) {
-        if(isInvalidDeleteMessage(number)) {
-            return deleteFailed(response);
-        }
-
-        List<Phone> findPhone = phoneService.findAllByPhone(number); // Look for the number
-        if (findPhone.size() == 0) { // If it doesn't exist - we can't delete it
-            return deleteFailed(response);
-        }
-
-        boolean deleteSuccess = phoneService.deleteContact(number);
-        if (!deleteSuccess) {
-            response.setText(messageService.getDeleteFail());
-            return response;
-        }
-        response.setText(messageService.getDeleteSuccess());
-        return response;
-
+        return deleteService.deleteContactConfirmed(number, response);
     }
 
-    public PartialBotApiMethod<?> deleteContactQuestion(String message, SendMessage response) {
-        if(isInvalidDeleteMessage(message)) {
-            return deleteFailed(response);
-        }
-
-        String number = phoneService.getPhoneFromMessage(message);
-        List<Phone> findPhones = phoneService.findAllByPhone(number); // Look for the number
-        if (findPhones.size() == 0) { // If it doesn't exist - we can't delete it
-            return deleteFailed(response);
-        }
-
-        StringBuilder textMessage = new StringBuilder();
-        for(Phone temp: findPhones) {
-            textMessage.append("\"").append(temp.getPhone().trim()).append("\"")
-                    .append(" \"").append(temp.getName().trim()).append("\"").append("\n");
-        }
-        textMessage.delete(textMessage.length() - 1, textMessage.length());
-
-        response.setText(String.format(messageService.getDeleteAcknowledge(), textMessage.toString()));
-        response.setReplyMarkup(getDeleteKeyboard(number));
-
-        return response;
+    public SendMessage deleteContactQuestion(String message, SendMessage response) {
+        return deleteService.deleteContactQuestion(message, response);
     }
 
-    private SendMessage statFailed(SendMessage response) {
-        response.setText(messageService.getAdminStatFail());
-        return response;
-    }
-
-    public PartialBotApiMethod<?> stat(String message, SendMessage response) {
-        if(!message.isEmpty()) {
-            return statFailed(response);
-        }
-        Date today = new Date();
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, -1);
-        Date before = cal.getTime();
-        List<Phone> allPhonesLastDays = phoneService.stat(before, today);
-        try {
-            File csvData = writeStatCsv(allPhonesLastDays);
-            if (csvData != null) {
-                String chatId = response.getChatId();
-                Integer messageId = response.getReplyToMessageId();
-                return SendDocument.builder()
-                        .chatId(chatId)
-                        .replyToMessageId(messageId)
-                        .document(new InputFile(csvData))
-                        .caption(programVariables.getStatFileCaption())
-                        .build();
-            }
-        } catch (IOException e) {
-            LOGGER.error(e);
-            e.printStackTrace();
-        }
-        return statFailed(response);
-    }
-
-    private File writeStatCsv(List<Phone> allPhonesLastDays) throws IOException {
-        File file = new File(programVariables.getStatFilePath());
-        if (file.exists()) {
-            file.delete();
-        }
-        file.createNewFile();
-
-        String[] header = {"creator user id", "firstname", "lastname", "username", "phone", "name", "created at"};
-        List<String[]> csvPhones = new ArrayList<>();
-        csvPhones.add(header);
-        for(Phone phone: allPhonesLastDays) {
-            User creator = phone.getCreator();
-            csvPhones.add(new String[] {creator.getId().toString(), creator.getFirstName(), creator.getLastName(),
-            creator.getUsername(), phone.getPhone().trim(), phone.getName(), simpleDateFormat.format(phone.getCreatedAt())});
-        }
-
-        try (FileWriter fw = new FileWriter(file); CSVWriter writer = new CSVWriter(fw)) {
-            writer.writeAll(csvPhones);
-        } catch (IOException e) {
-            LOGGER.error(e);
-            e.printStackTrace();
-            return null;
-        }
-        return file;
-    }
-
-    private boolean isInvalidDeleteMessage(String message) {
-        return message == null || message.trim().equals("");
-    }
-
-    private InlineKeyboardMarkup getDeleteKeyboard(String number) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-
-        InlineKeyboardButton buttonYes = InlineKeyboardButton
-                .builder()
-                .text("Yes")
-                .callbackData(programVariables.getDeleteCallbackYes() + " " + number)
-                .build();
-        InlineKeyboardButton buttonNo = InlineKeyboardButton
-                .builder()
-                .text("No")
-                .callbackData(programVariables.getDeleteCallbackNo())
-                .build();
-
-        List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
-        rowList.add(new ArrayList<>(List.of(buttonYes, buttonNo)));
-
-        inlineKeyboardMarkup.setKeyboard(rowList);
-        return inlineKeyboardMarkup;
-    }
-
-    public PartialBotApiMethod<?> listNewContacts(SendMessage response) throws IOException {
-        List<UnknownPhone> unknownPhones = newContactService.getAllNewContacts();
-        if(unknownPhones.size() == 0) {
-            response.setText(messageService.getListNoRecords());
-            return response;
-        }
-        StringBuilder answer = new StringBuilder();
-        if (unknownPhones.size() < 10) {
-            answer.append(messageService.getListText());
-            for(UnknownPhone temp: unknownPhones) {
-                answer.append(temp.getPhone()).append("\n");
-            }
-            response.setText(answer.toString());
-            return response;
-        } else {
-            File file = writeUnknownToFile(unknownPhones);
-            if (file != null) {
-                String chatId = response.getChatId();
-                Integer messageId = response.getReplyToMessageId();
-                return SendDocument.builder()
-                        .chatId(chatId)
-                        .replyToMessageId(messageId)
-                        .caption((unknownPhones.size() - 1) + " " + programVariables.getUnknownNumbersMsgText())
-                        .document(new InputFile(file))
-                        .build();
-            } else {
-                response.setText(messageService.getListFail());
-                return response;
-            }
-        }
-    }
-
-    private File writeUnknownToFile(List<UnknownPhone> unknownPhones) throws IOException {
-        File file = new File(programVariables.getUnknownNumbersFilePath());
-        if (file.exists()) {
-            file.delete();
-        }
-        file.createNewFile();
-        List<String[]> contacts = createCsvDataNewContacts(unknownPhones);
-        try (FileWriter fw = new FileWriter(file); CSVWriter writer = new CSVWriter(fw)) {
-            writer.writeAll(contacts);
-        } catch (IOException e) {
-            LOGGER.error(e);
-            e.printStackTrace();
-            return null;
-        }
-        return file;
+    public PartialBotApiMethod<?> unknownContacts(SendMessage response) throws IOException {
+        return unknownContactsService.unknownContacts(response);
     }
 
     public PartialBotApiMethod<?> backup(SendMessage response) throws IOException {
-        List<String[]> phones = createCsvDataPhones(phoneService.getAllContacts());
-        if (phones.size() == 0) {
-            response.setText(messageService.getBackupNoRecords());
-            return response;
-        }
-        File file = new File(programVariables.getBackupFilePath());
-        if (file.exists()) {
-            file.delete();
-        }
-        file.createNewFile();
-        try (FileWriter fw = new FileWriter(file); CSVWriter writer = new CSVWriter(fw)) {
-            writer.writeAll(phones);
-        } catch (IOException e) {
-            LOGGER.error(e);
-            e.printStackTrace();
-            response.setText(programVariables.getBackupFail());
-            return response;
-        }
-        String chatId = response.getChatId();
-        Integer messageId = response.getReplyToMessageId();
-        return SendDocument.builder()
-                .chatId(chatId)
-                .replyToMessageId(messageId)
-                .caption(String.format(programVariables.getBackupCaption(), "" + (phones.size() - 1)))
-                .document(new InputFile(file))
-                .build();
+        return backupService.backup(response);
     }
 
-    private List<String[]> createCsvDataPhones(List<Phone> phones) {
-        String[] header = {"id", "phone", "name", "created at", "updated at",
-                "created by", "updated by"};
-        List<String[]> list = new ArrayList<>();
-        list.add(header);
-        for(Phone temp: phones) {
-            list.add(new String[] {temp.getId().toString().trim(), temp.getPhone().trim(), temp.getName().trim(),
-                    simpleDateFormat.format(temp.getCreatedAt()), simpleDateFormat.format(temp.getUpdatedAt()),
-                    temp.getCreator().getName(), temp.getEditor().getName()});
-        }
-        return list;
+    public PartialBotApiMethod<?> stat(String message, SendMessage response) {
+        return statisticsService.stat(message, response);
     }
-
-    private List<String[]> createCsvDataNewContacts(List<UnknownPhone> unknownPhones) {
-        String[] header = {"id", "phone", "created at", "created by"};
-        List<String[]> list = new ArrayList<>();
-        list.add(header);
-        for(UnknownPhone temp: unknownPhones) {
-            list.add(new String[] {temp.getId().toString().trim(), temp.getPhone().trim(),
-                    simpleDateFormat.format(temp.getCreatedAt()), temp.getCreator().getName()});
-        }
-        return list;
-    }
-
 }

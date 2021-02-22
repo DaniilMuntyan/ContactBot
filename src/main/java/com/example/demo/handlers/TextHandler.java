@@ -3,16 +3,17 @@ package com.example.demo.handlers;
 import com.example.demo.model.Phone;
 import com.example.demo.model.User;
 import com.example.demo.service.*;
+import com.example.demo.service.model.NewContactService;
+import com.example.demo.service.model.PhoneService;
+import com.example.demo.service.model.UserService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 
 import java.util.List;
-import java.util.Optional;
 
 @Component
 public final class TextHandler {
@@ -40,9 +41,7 @@ public final class TextHandler {
         if(user.isAdminMode()) { // If admin sends text to the bot, he/she will be exited from admin mode
             user.setAdminMode(false);
             userService.editAdminMode(user, false);
-            //LOGGER.info("User " + user.getId() + " exited from admin mode");
         }
-
         if (contacts.isEmpty()) {
             newContactService.saveNewContact(text, user);
             response.setText(messageService.getNotFoundMessage());

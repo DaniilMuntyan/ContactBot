@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.demo.service.model;
 
 import com.example.demo.model.Phone;
 import com.example.demo.model.User;
@@ -8,7 +8,6 @@ import org.apache.log4j.Logger;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
